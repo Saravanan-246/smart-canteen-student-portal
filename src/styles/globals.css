@@ -1,0 +1,29 @@
+/* Make app full height */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Basic smooth UI defaults */
+* {
+  box-sizing: border-box;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f3f4f6;
+}
+
+/* Remove default link blue color underline */
+a {
+  text-decoration: none;
+}
+
+/* For mobile better look */
+button {
+  font-family: inherit;
+}
