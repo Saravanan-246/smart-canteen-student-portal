@@ -1,28 +1,47 @@
-// server.js
-const express = require("express");
-const cors = require("cors");
-const dotenv = require("dotenv");
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import mongoose from "mongoose";
+import paymentRoutes from "./routes/paymentRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 
+// Load env
 dotenv.config();
-
-const paymentRoutes = require("./routes/payment");
-const orderRoutes = require("./routes/orders");
 
 const app = express();
 
-app.use(cors());
+// 🟢 Razorpay webhook (RAW body) — MUST BE FIRST
+app.use(
+  "/api/payment/webhook",
+  express.raw({ type: "application/json" })
+);
+
+// 🟢 JSON (after webhook)
 app.use(express.json());
 
-// Simple health check
-app.get("/", (req, res) => {
-  res.send("Smart Canteen Backend Running ✅");
-});
+// 🟢 CORS
+app.use(cors());
 
-// Routes
+// 🟢 Connect MongoDB
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch((err) => {
+    console.error("❌ MongoDB Error:", err);
+    process.exit(1); // 🔥 stop server if DB fails
+  });
+
+// 🟢 Routes
 app.use("/api/payment", paymentRoutes);
-app.use("/api/orders", orderRoutes);
+app.use("/api/auth", authRoutes);
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Backend running on http://localhost:${PORT}`);
+// 🟢 Root test
+app.get("/", (req, res) => {
+  res.send("🔥 Student Backend Running...");
 });
+
+// 🟢 Start server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () =>
+  console.log(`🚀 Server running on port ${PORT}`)
+);

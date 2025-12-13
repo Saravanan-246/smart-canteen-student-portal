@@ -1,67 +1,127 @@
-// controllers/paymentController.js
-const crypto = require("crypto");
-const razorpay = require("../config/razorpay");
-const { createOrder } = require("../models/orderModel");
+import Razorpay from "razorpay";
+import crypto from "crypto";
+import PaymentRequest from "../models/PaymentRequest.js";
+import Wallet from "../models/Wallet.js";
 
-const createPaymentOrder = async (req, res) => {
+/**
+ * ----------------------------------
+ * 1️⃣ CREATE Razorpay Order
+ * ----------------------------------
+ */
+export const createOrder = async (req, res) => {
   try {
-    const { amount, items, paymentMethod } = req.body;
+    const { studentId, amount } = req.body;
 
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ message: "Invalid amount" });
+    if (!studentId || !amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid student or amount.",
+      });
     }
 
-    const rpOrder = await razorpay.orders.create({
-      amount: amount * 100, // in paise
+    // 🔥 Initialize Razorpay HERE (after env loaded)
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+
+    console.log("KEY ID:", process.env.RAZORPAY_KEY_ID);
+
+    const order = await razorpay.orders.create({
+      amount: amount * 100,
       currency: "INR",
-      receipt: "rcpt_" + Date.now(),
+      receipt: `ORDER_${Date.now()}`,
     });
 
-    // Store order locally (status = "created")
-    const order = createOrder({
-      amount,
-      items: items || [],
-      paymentMethod,
-      razorpayOrderId: rpOrder.id,
-      status: "created",
-    });
-
-    res.json({
-      success: true,
-      razorpayOrder: rpOrder,
+    await PaymentRequest.create({
+      studentId,
       orderId: order.id,
-      key: process.env.RAZORPAY_KEY_ID,
+      amount,
+      status: "PENDING",
     });
-  } catch (err) {
-    console.error("Create payment error:", err.message);
-    res.status(500).json({ message: "Payment order create failed" });
+
+    res.json({ success: true, order });
+  } catch (error) {
+    console.error("❌ Order Creation Error:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
   }
 };
 
-const verifyPayment = (req, res) => {
+/**
+ * ----------------------------------
+ * 2️⃣ VERIFY Razorpay Webhook
+ * ----------------------------------
+ */
+export const verifyWebhook = async (req, res) => {
   try {
-    const {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-    } = req.body;
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const signature = req.headers["x-razorpay-signature"];
 
-    const signData = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSign = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(signData.toString())
+    const body = JSON.stringify(req.body);
+
+    const expectedSignature = crypto
+      .createHmac("sha256", secret)
+      .update(body)
       .digest("hex");
 
-    const isValid = expectedSign === razorpay_signature;
+    if (expectedSignature !== signature) {
+      console.log("⚠️ INVALID WEBHOOK SIGNATURE");
+      return res.status(400).json({ success: false, message: "Invalid Signature" });
+    }
 
-    res.json({ success: isValid });
-  } catch (err) {
-    console.error("Verify payment error:", err.message);
-    res.status(500).json({ message: "Payment verification failed" });
+    const event = req.body.event;
+
+    if (event === "payment.captured") {
+      const payment = req.body.payload.payment.entity;
+      const orderId = payment.order_id;
+      const amount = payment.amount / 100;
+
+      const updatedPayment = await PaymentRequest.findOneAndUpdate(
+        { orderId },
+        { status: "SUCCESS", paymentId: payment.id },
+        { new: true }
+      );
+
+      if (updatedPayment) {
+        await Wallet.findOneAndUpdate(
+          { studentId: updatedPayment.studentId },
+          { $inc: { balance: amount } },
+          { new: true, upsert: true }
+        );
+      }
+
+      console.log("✅ Payment Verified & Wallet Updated");
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("❌ Webhook Error:", error);
+    res.status(500).json({ success: false });
   }
 };
 
-module.exports = {
-  createPaymentOrder,
-  verifyPayment,
+/**
+ * ----------------------------------
+ * 3️⃣ GET Payment Status
+ * ----------------------------------
+ */
+export const getPaymentStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const payment = await PaymentRequest.findOne({ orderId });
+
+    if (!payment) {
+      return res.status(404).json({ status: "NOT_FOUND" });
+    }
+
+    res.json({
+      status: payment.status,
+      amount: payment.amount,
+      studentId: payment.studentId,
+    });
+  } catch (error) {
+    console.error("❌ Status Check Error:", error);
+    res.status(500).json({ status: "ERROR" });
+  }
 };

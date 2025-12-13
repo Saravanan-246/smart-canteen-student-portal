@@ -5,30 +5,32 @@ const KEY = "student_user";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  // Load user on refresh
   useEffect(() => {
     const stored = localStorage.getItem(KEY);
-    if (stored) setUser(JSON.parse(stored));
+    if (stored) {
+      setUser(JSON.parse(stored));
+    }
+    setLoading(false);
   }, []);
 
-  const login = (email) => {
-    const newUser = { email };
-    localStorage.setItem(KEY, JSON.stringify(newUser));
-    setUser(newUser);
+  // LOGIN (after login or auto-login)
+  const login = (student) => {
+    localStorage.setItem(KEY, JSON.stringify(student));
+    setUser(student);
   };
 
-  const signup = (userData) => {
-    localStorage.setItem(KEY, JSON.stringify(userData));
-    setUser(userData);
-  };
-
+  // LOGOUT
   const logout = () => {
     localStorage.removeItem(KEY);
+    localStorage.removeItem("studentToken");
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

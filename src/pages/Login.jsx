@@ -1,55 +1,83 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiMail, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
+import { useAuth } from "../context/AuthContext"; // 🔥 ADD THIS
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth(); // 🔥 ADD THIS
 
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setError("");
 
-    const storedUser = JSON.parse(localStorage.getItem("studentUser"));
-
-    if (!storedUser || storedUser.email !== form.email || storedUser.password !== form.password) {
-      setError("⚠ Wrong email or password");
+    if (!form.email || !form.password) {
+      setError("Please fill in all fields");
       return;
     }
 
-    localStorage.setItem("studentLoggedIn", "true");
-    navigate("/menu");
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Wrong email or password");
+        setLoading(false);
+        return;
+      }
+
+      // 🔑 SAVE TOKEN
+      localStorage.setItem("studentToken", data.token);
+
+      // 🔥 UPDATE AUTH CONTEXT (THIS WAS MISSING)
+      login(data.student);
+
+      // ➡️ DASHBOARD
+      navigate("/menu");
+
+    } catch (err) {
+      setError("Server not reachable. Please try again later.");
+      setLoading(false);
+    }
   };
 
   return (
     <>
       <div className="login-page">
-
-        {/* 🔥 Stylish Header Lines */}
         <div className="top-lines">
           <div className="line line1"></div>
           <div className="line line2"></div>
           <div className="line line3"></div>
         </div>
 
-        {/* 🍕 Floating Food Icons */}
         <img src="https://cdn-icons-png.flaticon.com/512/3480/3480190.png" className="food f1" />
         <img src="https://cdn-icons-png.flaticon.com/512/857/857681.png" className="food f2" />
         <img src="https://cdn-icons-png.flaticon.com/512/3075/3075977.png" className="food f3" />
 
-        {/* LOGIN BOX */}
         <div className="login-box">
-
           <h2>Welcome Back 👋</h2>
           <p className="subtitle">Login to continue ordering</p>
 
           <form className="form" onSubmit={handleLogin}>
-
-            {/* Email */}
             <div className="input-wrapper">
-              <FiMail className="icon" size={18}/>
+              <FiMail className="icon" size={18} />
               <input
                 type="email"
                 placeholder="Email"
@@ -58,9 +86,8 @@ export default function Login() {
               />
             </div>
 
-            {/* Password with eye toggle */}
             <div className="input-wrapper">
-              <FiLock className="icon" size={18}/>
+              <FiLock className="icon" size={18} />
               <input
                 type={showPass ? "text" : "password"}
                 placeholder="Password"
@@ -68,27 +95,29 @@ export default function Login() {
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
               <span className="eye-icon" onClick={() => setShowPass(!showPass)}>
-                {showPass ? <FiEyeOff size={18}/> : <FiEye size={18}/> }
+                {showPass ? <FiEyeOff size={18} /> : <FiEye size={18} />}
               </span>
             </div>
 
             {error && <p className="error">{error}</p>}
 
-            <button className="btn">Login</button>
+            <button className="btn" type="submit" disabled={loading}>
+              {loading ? "Logging in..." : "Login"}
+            </button>
           </form>
 
-          {/* Forgot password */}
           <p className="forgot">
-            <Link className="link small-link" to="/forgot-password">Forgot Password?</Link>
+            <Link className="link small-link" to="/forgot-password">
+              Forgot Password?
+            </Link>
           </p>
 
           <p className="small">
             New user? <Link className="link" to="/signup">Create Account</Link>
           </p>
-
         </div>
       </div>
-
+  
       {/* CSS */}
       <style>{`
         body { margin:0; font-family:"Poppins",sans-serif; }
@@ -175,7 +204,8 @@ export default function Login() {
           cursor:pointer;
           margin-top:6px;
         }
-        .btn:hover { transform:scale(1.06); }
+        .btn:hover:not(:disabled) { transform:scale(1.06); }
+        .btn:disabled { opacity:0.7; cursor:not-allowed; }
 
         .link { color:white;font-weight:bold;text-decoration:none; }
         .small-link { font-size:14px;opacity:.9; }

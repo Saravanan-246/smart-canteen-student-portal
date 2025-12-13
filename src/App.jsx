@@ -5,26 +5,33 @@ import Navbar from "./components/Navbar";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import ForgotPassword from "./pages/ForgotPassword";  // 👈 ADD THIS
+import ForgotPassword from "./pages/ForgotPassword";
 import Menu from "./pages/Menu";
 import Cart from "./pages/Cart";
 import Payment from "./pages/Payment";
 import OrderStatus from "./pages/OrderStatus";
+import Profile from "./pages/Profile";
 
+// 🔐 Protected route
 function ProtectedRoute({ children }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  if (loading) return null;
   return user ? children : <Navigate to="/login" replace />;
 }
 
+// 👤 Guest-only route
 function GuestRoute({ children }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  if (loading) return null;
   return user ? <Navigate to="/menu" replace /> : children;
 }
 
 export default function App() {
   const location = useLocation();
+  const { user, loading } = useAuth();
 
-  // Hide navbar on login, signup & forgot password
+  if (loading) return null;
+
   const isAuthPage =
     location.pathname === "/login" ||
     location.pathname === "/signup" ||
@@ -32,97 +39,33 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      
-      {/* Navbar hidden only on authentication screens */}
       {!isAuthPage && <Navbar />}
 
       <div className="app-content">
         <Routes>
-          
-          {/* Guest only Pages */}
-          <Route
-            path="/login"
-            element={
-              <GuestRoute>
-                <Login />
-              </GuestRoute>
-            }
-          />
+          {/* Guest */}
+          <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+          <Route path="/signup" element={<GuestRoute><Signup /></GuestRoute>} />
+          <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
 
-          <Route
-            path="/signup"
-            element={
-              <GuestRoute>
-                <Signup />
-              </GuestRoute>
-            }
-          />
+          {/* Protected */}
+          <Route path="/menu" element={<ProtectedRoute><Menu /></ProtectedRoute>} />
+          <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
+          <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
+          <Route path="/order-status" element={<ProtectedRoute><OrderStatus /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
+          {/* Default */}
           <Route
-            path="/forgot-password"
-            element={
-              <GuestRoute>
-                <ForgotPassword />
-              </GuestRoute>
-            }
+            path="/"
+            element={user ? <Navigate to="/menu" replace /> : <Navigate to="/login" replace />}
           />
-
-          {/* Protected Pages */}
           <Route
-            path="/menu"
-            element={
-              <ProtectedRoute>
-                <Menu />
-              </ProtectedRoute>
-            }
+            path="*"
+            element={user ? <Navigate to="/menu" replace /> : <Navigate to="/login" replace />}
           />
-
-          <Route
-            path="/cart"
-            element={
-              <ProtectedRoute>
-                <Cart />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/payment"
-            element={
-              <ProtectedRoute>
-                <Payment />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/order-status"
-            element={
-              <ProtectedRoute>
-                <OrderStatus />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Default Route */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </div>
-
-      {/* Global layout CSS */}
-      <style>{`
-        .app-shell {
-          min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-          background: #fff7f0; /* better warm orange theme */
-        }
-
-        .app-content {
-          flex: 1;
-        }
-      `}</style>
     </div>
   );
 }

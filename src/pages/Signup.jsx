@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiMail, FiUser, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
-import { useAuth } from "../context/AuthContext";  // 🔥 added
+import { useAuth } from "../context/AuthContext";
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { login } = useAuth(); // 🔥 added auth
+  const { login } = useAuth();
 
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -18,34 +18,68 @@ export default function Signup() {
   });
 
   const [error, setError] = useState("");
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
+    setError("");
 
     if (!form.name || !form.email || !form.password || !form.confirm) {
-      setError("⚠ All fields are required");
+      setError("All fields are required");
       return;
     }
 
     if (form.password !== form.confirm) {
-      setError("❌ Passwords do not match");
+      setError("Passwords do not match");
       return;
     }
 
-    const newUser = {
-      name: form.name,
-      email: form.email,
-      password: form.password,
-    };
+    try {
+      // 1️⃣ SIGNUP
+      const signupRes = await fetch(`${API_URL}/api/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+        }),
+      });
 
-    // Save to local storage
-    localStorage.setItem("studentUser", JSON.stringify(newUser));
+      const signupData = await signupRes.json();
 
-    // Update global auth + auto login
-    login(newUser);
+      if (!signupRes.ok) {
+        setError(signupData.message || "Signup failed");
+        return;
+      }
 
-    // Redirect to home
-    navigate("/menu");
+      // 2️⃣ AUTO LOGIN
+      const loginRes = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+        }),
+      });
+
+      const loginData = await loginRes.json();
+
+      if (!loginRes.ok) {
+        navigate("/login");
+        return;
+      }
+
+      // 3️⃣ SAVE TOKEN + AUTH CONTEXT
+      localStorage.setItem("studentToken", loginData.token);
+      login(loginData.student);
+
+      // 4️⃣ DASHBOARD
+      navigate("/menu");
+
+    } catch (err) {
+      setError("Server not reachable");
+    }
   };
 
   return (
@@ -66,9 +100,8 @@ export default function Signup() {
           <p className="subtitle">Join Smart Ordering</p>
 
           <form className="form" onSubmit={handleSignup}>
-
             <div className="input-wrapper">
-              <FiUser className="icon" size={18}/>
+              <FiUser className="icon" size={18} />
               <input
                 type="text"
                 placeholder="Name"
@@ -78,7 +111,7 @@ export default function Signup() {
             </div>
 
             <div className="input-wrapper">
-              <FiMail className="icon" size={18}/>
+              <FiMail className="icon" size={18} />
               <input
                 type="email"
                 placeholder="Email"
@@ -88,7 +121,7 @@ export default function Signup() {
             </div>
 
             <div className="input-wrapper">
-              <FiLock className="icon" size={18}/>
+              <FiLock className="icon" size={18} />
               <input
                 type={showPass ? "text" : "password"}
                 placeholder="Password"
@@ -96,12 +129,12 @@ export default function Signup() {
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
               <span className="eye-icon" onClick={() => setShowPass(!showPass)}>
-                {showPass ? <FiEyeOff size={18}/> : <FiEye size={18}/> }
+                {showPass ? <FiEyeOff size={18} /> : <FiEye size={18} />}
               </span>
             </div>
 
             <div className="input-wrapper">
-              <FiLock className="icon" size={18}/>
+              <FiLock className="icon" size={18} />
               <input
                 type={showConfirm ? "text" : "password"}
                 placeholder="Confirm Password"
@@ -109,7 +142,7 @@ export default function Signup() {
                 onChange={(e) => setForm({ ...form, confirm: e.target.value })}
               />
               <span className="eye-icon" onClick={() => setShowConfirm(!showConfirm)}>
-                {showConfirm ? <FiEyeOff size={18}/> : <FiEye size={18}/> }
+                {showConfirm ? <FiEyeOff size={18} /> : <FiEye size={18} />}
               </span>
             </div>
 
@@ -123,7 +156,7 @@ export default function Signup() {
           </p>
         </div>
       </div>
-
+ 
       {/* 🔥 Same UI (unchanged) */}
       <style>{`
         body { margin:0; font-family:"Poppins",sans-serif; }

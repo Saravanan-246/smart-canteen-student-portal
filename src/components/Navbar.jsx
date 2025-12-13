@@ -1,55 +1,64 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
-import { FiHome, FiShoppingCart, FiList, FiLogOut } from "react-icons/fi";
+import { FiHome, FiShoppingCart, FiList, FiLogOut, FiUser } from "react-icons/fi";
 import { TbSchool } from "react-icons/tb";
+import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
-
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
+
   const underlineRef = useRef(null);
   const linksRef = useRef([]);
 
   const pages = [
     { path: "/menu", label: "Menu", icon: <FiHome size={20} /> },
     { path: "/cart", label: "Cart", icon: <FiShoppingCart size={20} /> },
-    { path: "/order-status", label: "My Orders", icon: <FiList size={20} /> }
+    { path: "/order-status", label: "My Orders", icon: <FiList size={20} /> },
+    { path: "/profile", label: "Profile", icon: <FiUser size={20} /> }
   ];
 
-  // Move underline to active link
   useEffect(() => {
-    const activeIndex = pages.findIndex(p => p.path === location.pathname);
-    if (linksRef.current[activeIndex] && underlineRef.current) {
-      underlineRef.current.style.width = linksRef.current[activeIndex].offsetWidth + "px";
-      underlineRef.current.style.transform =
-        `translateX(${linksRef.current[activeIndex].offsetLeft}px)`;
+    setMenuOpen(false);
+    setConfirmVisible(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const index = pages.findIndex(p => p.path === location.pathname);
+    const underline = underlineRef.current;
+    const el = linksRef.current[index];
+    if (!underline) return;
+
+    if (el) {
+      underline.style.width = el.offsetWidth + "px";
+      underline.style.transform = `translateX(${el.offsetLeft}px)`;
+      underline.style.opacity = "1";
+    } else {
+      underline.style.opacity = "0";
     }
   }, [location.pathname, menuOpen]);
 
-  const logout = () => setConfirmVisible(true);
-
   const confirmLogout = () => {
-    localStorage.removeItem("studentLoggedIn");
-    navigate("/login");
+    logout();
+    localStorage.removeItem("student_user");
+    localStorage.removeItem("studentToken");
+    navigate("/login", { replace: true });
   };
 
   return (
     <>
       <nav className="navbar">
-
-        {/* App Branding */}
-        <div className="brand">
-          <TbSchool size={28} className="brand-icon" />
+        <div className="brand" onClick={() => navigate("/menu")}>
+          <TbSchool size={28} />
           <h2 className="brand-text">Student Portal</h2>
         </div>
 
-        {/* Desktop + mobile nav */}
         <div className={`nav-links ${menuOpen ? "open" : ""}`}>
-
-          {/* Sliding underline */}
-          <div className="underline" ref={underlineRef}></div>
+          <div className="underline" ref={underlineRef} />
 
           {pages.map((item, i) => (
             <Link
@@ -57,24 +66,21 @@ export default function Navbar() {
               to={item.path}
               className={`nav-link ${location.pathname === item.path ? "active" : ""}`}
               ref={(el) => (linksRef.current[i] = el)}
-              onClick={() => setMenuOpen(false)}
             >
-              {item.icon} {item.label}
+              {item.icon} <span>{item.label}</span>
             </Link>
           ))}
 
-          <button className="logout-btn" onClick={logout}>
-            <FiLogOut size={20} /> Logout
+          <button className="logout-btn" onClick={() => setConfirmVisible(true)}>
+            <FiLogOut size={20} /> <span>Logout</span>
           </button>
         </div>
 
-        {/* Mobile toggle */}
-        <button className="menu-btn" onClick={() => setMenuOpen(!menuOpen)}>
+        <button className="menu-btn" onClick={() => setMenuOpen(s => !s)}>
           {menuOpen ? "✖" : "☰"}
         </button>
       </nav>
 
-      {/* Logout Prompt */}
       {confirmVisible && (
         <div className="popup-bg">
           <div className="popup">
@@ -87,7 +93,7 @@ export default function Navbar() {
           </div>
         </div>
       )}
-
+  
       <style>{`
 
         /* Navbar Container */
@@ -108,6 +114,7 @@ export default function Navbar() {
           display: flex;
           align-items: center;
           gap: 8px;
+          cursor: pointer;
         }
         .brand-text {
           font-size: 20px;
@@ -128,42 +135,47 @@ export default function Navbar() {
           position: absolute;
           bottom: -6px;
           height: 3px;
-          background: white;
+          background: rgba(255,255,255,0.95);
           border-radius: 6px;
           transition: 0.35s ease;
+          width: 0;
+          transform: translateX(0);
+          opacity: 0;
         }
 
         /* Nav button style */
         .nav-link {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
           text-decoration: none;
           color: white;
           font-size: 15px;
-          opacity: 0.85;
+          opacity: 0.9;
           transition: 0.25s;
         }
 
-        .nav-link:hover { opacity: 1; }
-        .nav-link.active { opacity: 1; font-weight: 600; }
+        .nav-link .link-label { display: inline-block; }
+
+        .nav-link:hover { opacity: 1; transform: translateY(-1px); }
+        .nav-link.active { opacity: 1; font-weight: 700; }
 
         /* Logout button */
         .logout-btn {
           display: flex;
           align-items: center;
-          gap: 6px;
-          background: rgba(255,255,255,0.28);
+          gap: 8px;
+          background: rgba(255,255,255,0.18);
           padding: 9px 14px;
           border-radius: 10px;
           border: none;
           cursor: pointer;
-          font-weight: 600;
-          transition: .3s;
+          font-weight: 700;
+          transition: .25s;
           color: white;
         }
 
-        .logout-btn:hover { background: rgba(255,255,255,0.4); }
+        .logout-btn:hover { background: rgba(255,255,255,0.32); }
 
         .menu-btn {
           display: none;
@@ -171,6 +183,7 @@ export default function Navbar() {
           border: none;
           font-size: 28px;
           color: white;
+          cursor: pointer;
         }
 
         /* ------------------ MOBILE FIX ------------------ */
@@ -182,16 +195,16 @@ export default function Navbar() {
             flex-direction: column;
             width: 80%;
             position: absolute;
-            top: 63px;
+            top: 64px;
             right: 0;
-            padding: 25px;
-            gap: 22px;
+            padding: 22px;
+            gap: 18px;
 
-            /* 🔥 Strong mobile background visible */
+            /* mobile background */
             background: rgba(255,110,0,0.96);
-            border-left: 2px solid rgba(255,255,255,0.35);
-            border-bottom: 2px solid rgba(255,255,255,0.35);
-            border-radius: 0 0 0 18px;
+            border-left: 2px solid rgba(255,255,255,0.18);
+            border-bottom: 2px solid rgba(255,255,255,0.18);
+            border-radius: 0 0 0 16px;
             display: none;
           }
 
@@ -220,20 +233,23 @@ export default function Navbar() {
 
         /* Popup */
         .popup-bg {
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,0.6);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000; /* 🔥 ADD THIS */
+}
+
 
         .popup {
           background: white;
-          width: 260px;
+          width: 280px;
           padding: 20px;
           border-radius: 12px;
           text-align: center;
+          box-shadow: 0 12px 30px rgba(0,0,0,0.25);
         }
 
         .popup-actions {
@@ -247,10 +263,12 @@ export default function Navbar() {
           padding: 8px;
           border: none;
           border-radius: 8px;
+          cursor: pointer;
+          font-weight: 700;
         }
 
         .yes { background: #ff6a00; color: white; }
-        .no { background: #ddd; }
+        .no { background: #ddd; color: #333; }
 
       `}</style>
     </>

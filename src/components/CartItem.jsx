@@ -1,6 +1,9 @@
 import { FiPlus, FiMinus, FiTrash2 } from "react-icons/fi";
 
 export default function CartItem({ item, increase, decrease, remove }) {
+  // 🔥 SAFETY GUARD (prevents crash on logout)
+  if (!item) return null;
+
   return (
     <>
       <div className="cart-card">
@@ -15,19 +18,29 @@ export default function CartItem({ item, increase, decrease, remove }) {
           <p className="price">₹{item.price}</p>
 
           <div className="qty-box">
-            <button className="qty-btn" onClick={() => decrease(item.id)}>
+            <button
+              className="qty-btn"
+              onClick={() => decrease(item.id)}
+              disabled={item.qty <= 1}
+            >
               <FiMinus size={16} />
             </button>
 
             <span className="qty-num">{item.qty}</span>
 
-            <button className="qty-btn" onClick={() => increase(item.id)}>
+            <button
+              className="qty-btn"
+              onClick={() => increase(item.id)}
+            >
               <FiPlus size={16} />
             </button>
           </div>
         </div>
 
-        <button className="delete-btn" onClick={() => remove(item.id)}>
+        <button
+          className="delete-btn"
+          onClick={() => remove(item.id)}
+        >
           <FiTrash2 size={18} />
         </button>
       </div>
@@ -89,6 +102,11 @@ export default function CartItem({ item, increase, decrease, remove }) {
           display: flex;
           justify-content: center;
           align-items: center;
+        }
+
+        .qty-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         .qty-num {
