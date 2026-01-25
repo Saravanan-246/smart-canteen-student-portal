@@ -18,8 +18,8 @@ export default function Navbar() {
   const pages = [
     { path: "/menu", label: "Menu", icon: <FiHome size={20} /> },
     { path: "/cart", label: "Cart", icon: <FiShoppingCart size={20} /> },
-    { path: "/order-status", label: "My Orders", icon: <FiList size={20} /> },
-    { path: "/profile", label: "Profile", icon: <FiUser size={20} /> }
+    { path: "/history", label: "My Orders", icon: <FiList size={20} /> },
+    { path: "/profile", label: "Profile", icon: <FiUser size={20} /> },
   ];
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function Navbar() {
   }, [location.pathname]);
 
   useEffect(() => {
-    const index = pages.findIndex(p => p.path === location.pathname);
+    const index = pages.findIndex((p) => p.path === location.pathname);
     const underline = underlineRef.current;
     const el = linksRef.current[index];
     if (!underline) return;
@@ -64,19 +64,24 @@ export default function Navbar() {
             <Link
               key={item.path}
               to={item.path}
-              className={`nav-link ${location.pathname === item.path ? "active" : ""}`}
+              className={`nav-link ${
+                location.pathname === item.path ? "active" : ""
+              }`}
               ref={(el) => (linksRef.current[i] = el)}
             >
               {item.icon} <span>{item.label}</span>
             </Link>
           ))}
 
-          <button className="logout-btn" onClick={() => setConfirmVisible(true)}>
+          <button
+            className="logout-btn"
+            onClick={() => setConfirmVisible(true)}
+          >
             <FiLogOut size={20} /> <span>Logout</span>
           </button>
         </div>
 
-        <button className="menu-btn" onClick={() => setMenuOpen(s => !s)}>
+        <button className="menu-btn" onClick={() => setMenuOpen((s) => !s)}>
           {menuOpen ? "✖" : "☰"}
         </button>
       </nav>
@@ -87,15 +92,18 @@ export default function Navbar() {
             <h3>Logout?</h3>
             <p>Do you want to exit?</p>
             <div className="popup-actions">
-              <button className="yes" onClick={confirmLogout}>Yes</button>
-              <button className="no" onClick={() => setConfirmVisible(false)}>Cancel</button>
+              <button className="yes" onClick={confirmLogout}>
+                Yes
+              </button>
+              <button className="no" onClick={() => setConfirmVisible(false)}>
+                Cancel
+              </button>
             </div>
           </div>
         </div>
       )}
-  
-      <style>{`
 
+      <style>{`
         /* Navbar Container */
         .navbar {
           background: linear-gradient(135deg, #ff6a00, #ff8d00, #ffb300);
@@ -109,17 +117,22 @@ export default function Navbar() {
           color: white;
         }
 
-        /* Branding */
+        /* Branding - FIXED */
         .brand {
           display: flex;
           align-items: center;
           gap: 8px;
           cursor: pointer;
+          flex-shrink: 0;
         }
         .brand-text {
-          font-size: 20px;
-          font-weight: 700;
-          margin: 0;
+          font-size: 20px !important;
+          font-weight: 700 !important;
+          margin: 0 !important;
+          color: white !important;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+          position: relative;
+          z-index: 10;
         }
 
         /* Navigation block */
@@ -188,8 +201,10 @@ export default function Navbar() {
 
         /* ------------------ MOBILE FIX ------------------ */
         @media(max-width: 768px) {
-
-          .brand-text { font-size: 18px; }
+          .brand-text { 
+            font-size: 18px !important; 
+            text-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
+          }
 
           .nav-links {
             flex-direction: column;
@@ -199,8 +214,6 @@ export default function Navbar() {
             right: 0;
             padding: 22px;
             gap: 18px;
-
-            /* mobile background */
             background: rgba(255,110,0,0.96);
             border-left: 2px solid rgba(255,255,255,0.18);
             border-bottom: 2px solid rgba(255,255,255,0.18);
@@ -233,15 +246,14 @@ export default function Navbar() {
 
         /* Popup */
         .popup-bg {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000; /* 🔥 ADD THIS */
-}
-
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.6);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 2000;
+        }
 
         .popup {
           background: white;
@@ -269,7 +281,6 @@ export default function Navbar() {
 
         .yes { background: #ff6a00; color: white; }
         .no { background: #ddd; color: #333; }
-
       `}</style>
     </>
   );

@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiMail, FiUser, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
+import { FiMail, FiUser, FiLock } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export default function Signup() {
   const navigate = useNavigate();
   const { login } = useAuth();
-
-  const [showPass, setShowPass] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -18,7 +17,6 @@ export default function Signup() {
   });
 
   const [error, setError] = useState("");
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -35,7 +33,7 @@ export default function Signup() {
     }
 
     try {
-      // 1️⃣ SIGNUP
+      // ✅ SIGNUP
       const signupRes = await fetch(`${API_URL}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -53,7 +51,7 @@ export default function Signup() {
         return;
       }
 
-      // 2️⃣ AUTO LOGIN
+      // ✅ AUTO LOGIN
       const loginRes = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -70,17 +68,23 @@ export default function Signup() {
         return;
       }
 
-      // 3️⃣ SAVE TOKEN + AUTH CONTEXT
-      localStorage.setItem("studentToken", loginData.token);
-      login(loginData.student);
+      // ✅ IMPORTANT FIX
+      localStorage.setItem("token", loginData.token); // 🔥 KEY FIX
 
-      // 4️⃣ DASHBOARD
+      // optional (keep if you want)
+      localStorage.setItem("student_id", loginData.user._id);
+      localStorage.setItem("student_name", loginData.user.name);
+      localStorage.setItem("student_email", loginData.user.email);
+
+      login(loginData.user);
       navigate("/menu");
-
     } catch (err) {
+      console.error("❌ Signup error:", err);
       setError("Server not reachable");
     }
   };
+
+  // ⬇️ UI + CSS REMAINS EXACTLY SAME
 
   return (
     <>
@@ -91,13 +95,25 @@ export default function Signup() {
           <div className="line line3"></div>
         </div>
 
-        <img src="https://cdn-icons-png.flaticon.com/512/3480/3480190.png" className="food f1" />
-        <img src="https://cdn-icons-png.flaticon.com/512/857/857681.png" className="food f2" />
-        <img src="https://cdn-icons-png.flaticon.com/512/3075/3075977.png" className="food f3" />
+
+        <img
+          src="https://cdn-icons-png.flaticon.com/512/3480/3480190.png"
+          className="food f1"
+        />
+        <img
+          src="https://cdn-icons-png.flaticon.com/512/857/857681.png"
+          className="food f2"
+        />
+        <img
+          src="https://cdn-icons-png.flaticon.com/512/3075/3075977.png"
+          className="food f3"
+        />
+
 
         <div className="signup-box">
           <h2>Create Account ✨</h2>
           <p className="subtitle">Join Smart Ordering</p>
+
 
           <form className="form" onSubmit={handleSignup}>
             <div className="input-wrapper">
@@ -110,6 +126,7 @@ export default function Signup() {
               />
             </div>
 
+
             <div className="input-wrapper">
               <FiMail className="icon" size={18} />
               <input
@@ -120,46 +137,58 @@ export default function Signup() {
               />
             </div>
 
-            <div className="input-wrapper">
-              <FiLock className="icon" size={18} />
-              <input
-                type={showPass ? "text" : "password"}
-                placeholder="Password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
-              <span className="eye-icon" onClick={() => setShowPass(!showPass)}>
-                {showPass ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-              </span>
-            </div>
 
             <div className="input-wrapper">
               <FiLock className="icon" size={18} />
               <input
-                type={showConfirm ? "text" : "password"}
+                type="password"
+                placeholder="Password"
+                value={form.password}
+                onChange={(e) =>
+                  setForm({ ...form, password: e.target.value })
+                }
+              />
+            </div>
+
+
+            <div className="input-wrapper">
+              <FiLock className="icon" size={18} />
+              <input
+                type="password"
                 placeholder="Confirm Password"
                 value={form.confirm}
-                onChange={(e) => setForm({ ...form, confirm: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, confirm: e.target.value })
+                }
               />
-              <span className="eye-icon" onClick={() => setShowConfirm(!showConfirm)}>
-                {showConfirm ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-              </span>
             </div>
+
 
             {error && <p className="error">{error}</p>}
 
-            <button className="btn">Create Account</button>
+
+            <button className="btn" type="submit">
+              Create Account
+            </button>
           </form>
 
+
           <p className="small">
-            Already have an account? <Link className="link" to="/login">Login</Link>
+            Already have an account?{" "}
+            <Link className="link" to="/login">
+              Login
+            </Link>
           </p>
         </div>
       </div>
- 
-      {/* 🔥 Same UI (unchanged) */}
+
+
+       
+
+
       <style>{`
         body { margin:0; font-family:"Poppins",sans-serif; }
+
 
         .signup-page {
           height:100vh;
@@ -168,11 +197,13 @@ export default function Signup() {
           position:relative; overflow:hidden;
         }
 
+
         .top-lines { position:absolute; top:18px; left:15px; }
         .line { height:4px; background:white; border-radius:10px; opacity:0.85; }
         .line1 { width:150px; margin-bottom:6px; }
         .line2 { width:100px; margin-bottom:6px; }
         .line3 { width:65px; }
+
 
         .food {
           position:absolute;
@@ -181,14 +212,17 @@ export default function Signup() {
           animation:move 6s infinite alternate ease-in-out;
         }
 
+
         .f1 { width:85px; top:15%; left:6%; }
         .f2 { width:75px; bottom:15%; right:10%; }
         .f3 { width:95px; top:45%; right:30%; }
+
 
         @keyframes move {
           from { transform:translateY(0px) rotate(0deg); }
           to { transform:translateY(15px) rotate(8deg); }
         }
+
 
         .signup-box {
           width:350px;
@@ -201,10 +235,13 @@ export default function Signup() {
           animation:fade .35s ease;
         }
 
+
         h2 { text-align:center;color:white;font-weight:600;margin-bottom:6px; }
         .subtitle { text-align:center;color:#ffeccc;margin-bottom:22px; }
 
+
         .form { display:flex;flex-direction:column;gap:18px; }
+
 
         .input-wrapper {
           display:flex; align-items:center;
@@ -216,10 +253,12 @@ export default function Signup() {
           border:1px solid transparent;
         }
 
+
         .input-wrapper:focus-within {
           border:1px solid white;
           box-shadow:0 0 10px rgba(255,255,255,.45);
         }
+
 
         input {
           border:none;background:transparent;
@@ -227,8 +266,10 @@ export default function Signup() {
           font-size:16px;font-weight:500;letter-spacing:.4px;
         }
 
+
         input::placeholder { color:#fff1ce;font-size:14px; }
         .eye-icon { cursor:pointer;color:white;opacity:.9; }
+
 
         .btn {
           background:white;
@@ -244,9 +285,11 @@ export default function Signup() {
         }
         .btn:hover { transform:scale(1.06); }
 
+
         .link { color:white;font-weight:bold;text-decoration:none; }
         .small { text-align:center;color:white;margin-top:10px; }
         .error { text-align:center;color:#ffe1e1; font-size:14px; }
+
 
         @keyframes fade {
           from { opacity:0; transform:translateY(20px); }

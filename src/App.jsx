@@ -9,8 +9,8 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Menu from "./pages/Menu";
 import Cart from "./pages/Cart";
 import Payment from "./pages/Payment";
-import OrderStatus from "./pages/OrderStatus";
 import Profile from "./pages/Profile";
+import History from "./pages/History";
 
 // 🔐 Protected route
 function ProtectedRoute({ children }) {
@@ -43,26 +43,94 @@ export default function App() {
 
       <div className="app-content">
         <Routes>
-          {/* Guest */}
-          <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
-          <Route path="/signup" element={<GuestRoute><Signup /></GuestRoute>} />
-          <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+          {/* ========= GUEST ROUTES ========= */}
+          <Route
+            path="/login"
+            element={
+              <GuestRoute>
+                <Login />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <GuestRoute>
+                <Signup />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <GuestRoute>
+                <ForgotPassword />
+              </GuestRoute>
+            }
+          />
 
-          {/* Protected */}
-          <Route path="/menu" element={<ProtectedRoute><Menu /></ProtectedRoute>} />
-          <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
-          <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
-          <Route path="/order-status" element={<ProtectedRoute><OrderStatus /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          {/* ========= PROTECTED ROUTES ========= */}
+          <Route
+            path="/menu"
+            element={
+              <ProtectedRoute>
+                <Menu />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cart"
+            element={
+              <ProtectedRoute>
+                <Cart />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payment"
+            element={
+              <ProtectedRoute>
+                <Payment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute>
+                <History />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Default */}
+          {/* ========= DEFAULT ROUTES ========= */}
           <Route
             path="/"
-            element={user ? <Navigate to="/menu" replace /> : <Navigate to="/login" replace />}
+            element={
+              user ? (
+                <Navigate to="/menu" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
           />
           <Route
             path="*"
-            element={user ? <Navigate to="/menu" replace /> : <Navigate to="/login" replace />}
+            element={
+              user ? (
+                <Navigate to="/menu" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
           />
         </Routes>
       </div>

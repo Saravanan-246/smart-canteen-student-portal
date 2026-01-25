@@ -1,31 +1,45 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 const AuthContext = createContext();
 const KEY = "student_user";
+
+// 🔥 DEV MODE FLAG (TURN FALSE IN PROD)
+const DEV_FREE = true;
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user on refresh
+  // 🔁 LOAD USER ON REFRESH
   useEffect(() => {
-    const stored = localStorage.getItem(KEY);
-    if (stored) {
-      setUser(JSON.parse(stored));
+    try {
+      const stored = localStorage.getItem(KEY);
+      if (stored) {
+        setUser(JSON.parse(stored));
+      }
+    } catch (err) {
+      localStorage.removeItem(KEY);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
-  // LOGIN (after login or auto-login)
+  // ✅ LOGIN
   const login = (student) => {
-    localStorage.setItem(KEY, JSON.stringify(student));
     setUser(student);
+    localStorage.setItem(KEY, JSON.stringify(student));
+
+    // 🔥 DEV FREE ACCESS
+    if (DEV_FREE) {
+      localStorage.setItem("isPaid", "true");
+    }
   };
 
-  // LOGOUT
+  // ✅ LOGOUT
   const logout = () => {
     localStorage.removeItem(KEY);
-    localStorage.removeItem("studentToken");
+    localStorage.removeItem("isPaid"); // 🔥 clear payment state
+    localStorage.removeItem("token");  // 🔥 optional but clean
     setUser(null);
   };
 
