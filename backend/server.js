@@ -7,35 +7,50 @@ import authRoutes from "./auth/auth.routes.js";
 import orderRoutes from "./orders/order.routes.js";
 import paymentRoutes from "./payments/payment.routes.js";
 
+// Load env first
 dotenv.config();
+
+// Connect DB (safe)
 connectDB();
 
 const app = express();
 
-// 🔥 CORS – ALLOW ALL LOCALHOST PORTS (DEV)
+/* ======================
+   MIDDLEWARE
+====================== */
+
+// ✅ CORS (DEV + PROD SAFE)
 app.use(
   cors({
-    origin: true,        // ✅ FIX
+    origin: true,        // allow all origins (Vercel, localhost, etc.)
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// 🔥 PRE-FLIGHT FIX (VERY IMPORTANT)
+// ✅ Preflight (important for POST / PUT)
 app.options("*", cors());
 
 app.use(express.json());
 
-// Routes
+/* ======================
+   ROUTES
+====================== */
 app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
 
-// Health check
+/* ======================
+   HEALTH CHECK
+====================== */
 app.get("/", (req, res) => {
-  res.send("🔥 Student Backend Running");
+  res.status(200).send("🔥 Student Backend Running");
 });
 
-// 404 handler
+/* ======================
+   404 HANDLER
+====================== */
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -43,7 +58,9 @@ app.use((req, res) => {
   });
 });
 
-// Server
+/* ======================
+   SERVER
+====================== */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Student server running on port ${PORT}`);
