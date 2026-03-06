@@ -3,62 +3,78 @@ import { Link, useNavigate } from "react-router-dom";
 import { FiMail, FiLock } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://smart-canteen-student-portal.onrender.com";
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+  });
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // update form
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // login
   const handleLogin = async (e) => {
     e.preventDefault();
+
     setError("");
 
     if (!form.email || !form.password) {
-      setError("Please fill in all fields");
+      setError("Please fill all fields");
       return;
     }
 
-    setLoading(true);
-
     try {
+      setLoading(true);
+
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(form),
       });
 
       const data = await res.json();
 
-      if (!res.ok) {
-        setError(data.message || "Login failed");
-        return;
+      if (!res.ok || !data.user) {
+        throw new Error(data.message || "Invalid email or password");
       }
 
-      const studentData = {
+      const userData = {
         id: data.user._id,
         name: data.user.name,
         email: data.user.email,
         token: data.token,
       };
 
-      localStorage.setItem("student_user", JSON.stringify(studentData));
-      login(studentData);
+      localStorage.setItem("student_user", JSON.stringify(userData));
+
+      login(userData);
 
       navigate("/menu");
-    } catch {
-      setError("Server error");
+    } catch (err) {
+      setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
   };
-
- 
-  // UI PART CONTINUES (UNCHANGED)
- 
 
   return (
     <>
@@ -68,7 +84,6 @@ export default function Login() {
           <div className="line line2"></div>
           <div className="line line3"></div>
         </div>
-
 
         <img
           src="https://cdn-icons-png.flaticon.com/512/3480/3480190.png"
@@ -83,54 +98,47 @@ export default function Login() {
           className="food f3"
         />
 
-
         <div className="login-box">
           <h2>Welcome Back 👋</h2>
           <p className="subtitle">Login to continue ordering</p>
 
-
           <form className="form" onSubmit={handleLogin}>
             <div className="input-wrapper">
               <FiMail className="icon" size={18} />
+
               <input
                 type="email"
+                name="email"
                 placeholder="Email"
                 value={form.email}
-                onChange={(e) =>
-                  setForm({ ...form, email: e.target.value })
-                }
+                onChange={handleChange}
               />
             </div>
-
 
             <div className="input-wrapper">
               <FiLock className="icon" size={18} />
+
               <input
                 type="password"
+                name="password"
                 placeholder="Password"
                 value={form.password}
-                onChange={(e) =>
-                  setForm({ ...form, password: e.target.value })
-                }
+                onChange={handleChange}
               />
             </div>
 
-
             {error && <p className="error">{error}</p>}
-
 
             <button className="btn" type="submit" disabled={loading}>
               {loading ? "Logging in..." : "Login"}
             </button>
           </form>
 
-
           <p className="forgot">
             <Link className="link small-link" to="/forgot-password">
               Forgot Password?
             </Link>
           </p>
-
 
           <p className="small">
             New user?{" "}
@@ -141,7 +149,7 @@ export default function Login() {
         </div>
       </div>
 
-
+ 
       <style>{`
         body { margin:0; font-family:"Poppins",sans-serif; }
 

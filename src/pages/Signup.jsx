@@ -3,7 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { FiMail, FiUser, FiLock } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://smart-canteen-student-portal.onrender.com";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -17,74 +19,94 @@ export default function Signup() {
   });
 
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    setError("");
+  // update form
+  const handleChange = (e) => {
+    const { name, value } = e.target;
 
-    if (!form.name || !form.email || !form.password || !form.confirm) {
-      setError("All fields are required");
-      return;
-    }
-
-    if (form.password !== form.confirm) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    try {
-      // ✅ SIGNUP
-      const signupRes = await fetch(`${API_URL}/api/auth/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          password: form.password,
-        }),
-      });
-
-      const signupData = await signupRes.json();
-
-      if (!signupRes.ok) {
-        setError(signupData.message || "Signup failed");
-        return;
-      }
-
-      // ✅ AUTO LOGIN
-      const loginRes = await fetch(`${API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-        }),
-      });
-
-      const loginData = await loginRes.json();
-
-      if (!loginRes.ok) {
-        navigate("/login");
-        return;
-      }
-
-      // ✅ IMPORTANT FIX
-      localStorage.setItem("token", loginData.token); // 🔥 KEY FIX
-
-      // optional (keep if you want)
-      localStorage.setItem("student_id", loginData.user._id);
-      localStorage.setItem("student_name", loginData.user.name);
-      localStorage.setItem("student_email", loginData.user.email);
-
-      login(loginData.user);
-      navigate("/menu");
-    } catch (err) {
-      console.error("❌ Signup error:", err);
-      setError("Server not reachable");
-    }
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  // ⬇️ UI + CSS REMAINS EXACTLY SAME
+  // signup
+ const handleSignup = async (e) => {
+  e.preventDefault();
+  setError("");
+
+  if (!form.name || !form.email || !form.password || !form.confirm) {
+    setError("All fields are required");
+    return;
+  }
+
+  if (form.password !== form.confirm) {
+    setError("Passwords do not match");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // 1️⃣ CREATE ACCOUNT
+    const signupRes = await fetch(`${API_URL}/api/auth/signup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+      }),
+    });
+
+    const signupData = await signupRes.json();
+
+    if (!signupRes.ok) {
+      throw new Error(signupData.message || "Signup failed");
+    }
+
+    // 2️⃣ AUTO LOGIN
+    const loginRes = await fetch(`${API_URL}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: form.email,
+        password: form.password,
+      }),
+    });
+
+    const loginData = await loginRes.json();
+
+    if (!loginRes.ok) {
+      throw new Error(loginData.message || "Login failed");
+    }
+
+    const userData = {
+      id: loginData.user._id,
+      name: loginData.user.name,
+      email: loginData.user.email,
+      token: loginData.token,
+    };
+
+    localStorage.setItem("student_user", JSON.stringify(userData));
+
+    login(userData);
+
+    // 3️⃣ GO TO DASHBOARD
+    navigate("/menu");
+
+  } catch (err) {
+    console.error("Signup error:", err);
+    setError(err.message || "Server error");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <>
@@ -95,83 +117,77 @@ export default function Signup() {
           <div className="line line3"></div>
         </div>
 
-
         <img
           src="https://cdn-icons-png.flaticon.com/512/3480/3480190.png"
           className="food f1"
+          alt=""
         />
         <img
           src="https://cdn-icons-png.flaticon.com/512/857/857681.png"
           className="food f2"
+          alt=""
         />
         <img
           src="https://cdn-icons-png.flaticon.com/512/3075/3075977.png"
           className="food f3"
+          alt=""
         />
-
 
         <div className="signup-box">
           <h2>Create Account ✨</h2>
           <p className="subtitle">Join Smart Ordering</p>
-
 
           <form className="form" onSubmit={handleSignup}>
             <div className="input-wrapper">
               <FiUser className="icon" size={18} />
               <input
                 type="text"
+                name="name"
                 placeholder="Name"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={handleChange}
               />
             </div>
-
 
             <div className="input-wrapper">
               <FiMail className="icon" size={18} />
               <input
                 type="email"
+                name="email"
                 placeholder="Email"
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onChange={handleChange}
               />
             </div>
-
 
             <div className="input-wrapper">
               <FiLock className="icon" size={18} />
               <input
                 type="password"
+                name="password"
                 placeholder="Password"
                 value={form.password}
-                onChange={(e) =>
-                  setForm({ ...form, password: e.target.value })
-                }
+                onChange={handleChange}
               />
             </div>
-
 
             <div className="input-wrapper">
               <FiLock className="icon" size={18} />
               <input
                 type="password"
+                name="confirm"
                 placeholder="Confirm Password"
                 value={form.confirm}
-                onChange={(e) =>
-                  setForm({ ...form, confirm: e.target.value })
-                }
+                onChange={handleChange}
               />
             </div>
-
 
             {error && <p className="error">{error}</p>}
 
-
-            <button className="btn" type="submit">
-              Create Account
+            <button className="btn" type="submit" disabled={loading}>
+              {loading ? "Creating..." : "Create Account"}
             </button>
           </form>
-
 
           <p className="small">
             Already have an account?{" "}
@@ -181,11 +197,7 @@ export default function Signup() {
           </p>
         </div>
       </div>
-
-
-       
-
-
+ 
       <style>{`
         body { margin:0; font-family:"Poppins",sans-serif; }
 
