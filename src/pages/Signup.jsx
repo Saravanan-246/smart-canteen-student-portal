@@ -34,10 +34,18 @@ export default function Signup() {
   // signup
  const handleSignup = async (e) => {
   e.preventDefault();
+
+  if (loading) return; // prevent double click
+
   setError("");
 
-  if (!form.name || !form.email || !form.password || !form.confirm) {
+  if (!form.name.trim() || !form.email.trim() || !form.password || !form.confirm) {
     setError("All fields are required");
+    return;
+  }
+
+  if (form.password.length < 6) {
+    setError("Password must be at least 6 characters");
     return;
   }
 
@@ -49,15 +57,15 @@ export default function Signup() {
   try {
     setLoading(true);
 
-    // 1️⃣ CREATE ACCOUNT
+    /* ---------- SIGNUP ---------- */
     const signupRes = await fetch(`${API_URL}/api/auth/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        name: form.name,
-        email: form.email,
+        name: form.name.trim(),
+        email: form.email.trim(),
         password: form.password,
       }),
     });
@@ -65,25 +73,25 @@ export default function Signup() {
     const signupData = await signupRes.json();
 
     if (!signupRes.ok) {
-      throw new Error(signupData.message || "Signup failed");
+      throw new Error(signupData?.message || "Signup failed");
     }
 
-    // 2️⃣ AUTO LOGIN
+    /* ---------- AUTO LOGIN ---------- */
     const loginRes = await fetch(`${API_URL}/api/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        email: form.email,
+        email: form.email.trim(),
         password: form.password,
       }),
     });
 
     const loginData = await loginRes.json();
 
-    if (!loginRes.ok) {
-      throw new Error(loginData.message || "Login failed");
+    if (!loginRes.ok || !loginData?.user) {
+      throw new Error(loginData?.message || "Login failed after signup");
     }
 
     const userData = {
@@ -93,11 +101,14 @@ export default function Signup() {
       token: loginData.token,
     };
 
+    /* ---------- SAVE USER ---------- */
     localStorage.setItem("student_user", JSON.stringify(userData));
+    localStorage.setItem("token", loginData.token);
 
+    /* ---------- UPDATE AUTH ---------- */
     login(userData);
 
-    // 3️⃣ GO TO DASHBOARD
+    /* ---------- REDIRECT ---------- */
     navigate("/menu");
 
   } catch (err) {
@@ -107,7 +118,6 @@ export default function Signup() {
     setLoading(false);
   }
 };
-
   return (
     <>
       <div className="signup-page">

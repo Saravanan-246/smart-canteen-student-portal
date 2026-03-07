@@ -1,186 +1,141 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { FaGooglePay } from "react-icons/fa";
-import { SiPaytm, SiPhonepe } from "react-icons/si";
-import QRCode from "react-qr-code";
 import axios from "axios";
+
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://smart-canteen-student-portal.onrender.com";
 
 export default function Payment() {
   const navigate = useNavigate();
   const location = useLocation();
+
   const totalAmount = location.state?.total || 0;
 
   const [order, setOrder] = useState(null);
-  const [upiLink, setUpiLink] = useState("");
   const [status, setStatus] = useState("IDLE");
+  const [loading, setLoading] = useState(false);
 
   const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
-  /* -------------------- LOAD RAZORPAY CUSTOM BUTTON --------------------*/
+  /* ---------------- USER CHECK ---------------- */
+  const user = JSON.parse(localStorage.getItem("student_user"));
+
   useEffect(() => {
-    const form = document.getElementById("rzp-btn");
-
-    if (form) {
-      form.innerHTML = ""; // avoid duplicate buttons
-
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/payment-button.js";
-      script.setAttribute("data-payment_button_id", "pl_Rn91OrM6zOQkop");
-      script.async = true;
-
-      form.appendChild(script);
+    if (!user?.token) {
+      alert("Please login again");
+      navigate("/login");
     }
-  }, []);
+  }, [navigate, user]);
 
-  /* -------------------- CREATE ORDER --------------------*/
+  /* ---------------- CREATE ORDER ---------------- */
   const createOrder = async () => {
-    const { data } = await axios.post("/api/payment/create", {
-      amount: totalAmount,
-      studentId: "S001",
-    });
+    if (loading) return;
 
-    setOrder(data.order);
+    try {
+      setLoading(true);
 
-    setUpiLink(
-      `upi://pay?pa=pay@upi&pn=SmartCanteen&am=${totalAmount}&cu=INR&tn=CanteenFood`
-    );
+      const { data } = await axios.post(
+        `${API_URL}/api/payment/create`,
+        {
+          amount: totalAmount,
+          studentId: user.id,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        }
+      );
 
-    openRazorpay(data.order);
+      if (!data?.order) {
+        throw new Error("Order creation failed");
+      }
+
+      setOrder(data.order);
+
+      openRazorpay(data.order);
+
+    } catch (err) {
+      console.error("Payment error:", err);
+      alert("Unable to start payment. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  /* -------------------- OPEN RAZOARPAY CHECKOUT --------------------*/
+  /* ---------------- OPEN RAZORPAY ---------------- */
   const openRazorpay = (orderObj) => {
     const options = {
       key: razorpayKey,
       order_id: orderObj.id,
       name: "Smart Canteen",
-      description: "Order Payment",
+      description: "Food Order Payment",
       amount: orderObj.amount,
       currency: "INR",
       theme: { color: "#FF7A00" },
-      handler: () => {
-        setStatus("PROCESSING");
+
+      handler: async (response) => {
+        try {
+          setStatus("PROCESSING");
+
+          await axios.post(
+            `${API_URL}/api/payment/verify`,
+            response,
+            {
+              headers: {
+                Authorization: `Bearer ${user.token}`,
+              },
+            }
+          );
+
+          setStatus("SUCCESS");
+
+          localStorage.removeItem("cart");
+
+          setTimeout(() => navigate("/order-status"), 1200);
+
+        } catch (err) {
+          console.error("Verification error:", err);
+          alert("Payment verification failed");
+        }
       },
     };
 
     const rzp = new window.Razorpay(options);
     rzp.open();
+
     setStatus("WAITING");
   };
 
-  /* -------------------- AUTO PAYMENT CHECK --------------------*/
+  /* ---------------- AUTO PAYMENT CHECK (fallback) ---------------- */
   useEffect(() => {
     if (!order || status === "SUCCESS") return;
 
     const interval = setInterval(async () => {
-      const res = await axios.get(`/api/payment/status/${order.id}`);
+      try {
+        const res = await axios.get(
+          `${API_URL}/api/payment/status/${order.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${user?.token}`,
+            },
+          }
+        );
 
-      if (res.data.status === "SUCCESS") {
-        setStatus("SUCCESS");
-        localStorage.removeItem("cart");
+        if (res.data.status === "SUCCESS") {
+          setStatus("SUCCESS");
+          localStorage.removeItem("cart");
 
-        setTimeout(() => navigate("/order-status"), 1500);
-
-        clearInterval(interval);
+          setTimeout(() => navigate("/order-status"), 1200);
+        }
+      } catch (err) {
+        console.error("Payment status check error:", err);
       }
-    }, 2000);
+    }, 3000);
 
     return () => clearInterval(interval);
-  }, [order, status]);
-
-  /* -------------------- JSX UI --------------------*/
-  return (
-    <div style={styles.container}>
-      <div style={styles.box}>
-        <h2 style={styles.title}>Pay Securely</h2>
-
-        <div style={styles.amountBox}>
-          <p>Total Amount</p>
-          <strong>₹{totalAmount}</strong>
-        </div>
-
-        {/* UPI APPS */}
-        <h4 style={styles.subHeader}>Pay Using UPI Apps</h4>
-
-        <div style={styles.apps}>
-          <FaGooglePay
-            style={styles.icon}
-            size={60}
-            onClick={() => {
-              window.location.href = upiLink;
-              setTimeout(() => navigate("/order-status"), 2000);
-            }}
-          />
-
-          <SiPhonepe
-            style={{ ...styles.icon, color: "#5F259F" }}
-            size={50}
-            onClick={() => {
-              window.location.href = upiLink;
-              setTimeout(() => navigate("/order-status"), 2000);
-            }}
-          />
-
-          <SiPaytm
-            style={{ ...styles.icon, color: "#0F9DE8" }}
-            size={50}
-            onClick={() => {
-              window.location.href = upiLink;
-              setTimeout(() => navigate("/order-status"), 2000);
-            }}
-          />
-        </div>
-
-        {/* OR */}
-        <div style={styles.orLine}>
-          <span>OR</span>
-        </div>
-
-        {/* QR CODE */}
-        <h4 style={styles.subHeader}>Scan QR to Pay</h4>
-
-        <div style={styles.qrArea}>
-          {!upiLink ? (
-            <p>Generate payment request…</p>
-          ) : (
-            <QRCode value={upiLink} size={160} />
-          )}
-        </div>
-
-        {/* Auto redirect when QR scanned */}
-        {upiLink && (
-          <script>
-            {setTimeout(() => navigate("/order-status"), 3000)}
-          </script>
-        )}
-
-        {/* OR */}
-        <div style={styles.orLine}>
-          <span>OR</span>
-        </div>
-
-        {/* RAZORPAY CUSTOM BUTTON */}
-        <h4 style={styles.subHeader}>Razorpay Secure Payment</h4>
-        <form id="rzp-btn" style={{ marginBottom: 20 }}></form>
-
-        {/* MAIN PAY BUTTON */}
-        <button style={styles.payBtn} onClick={createOrder}>
-          Proceed to Pay ₹{totalAmount}
-        </button>
-
-        {/* STATUS */}
-        {status === "WAITING" && (
-          <p style={styles.info}>⏳ Waiting for UPI confirmation…</p>
-        )}
-        {status === "PROCESSING" && (
-          <p style={styles.info}>🔍 Verifying Payment…</p>
-        )}
-        {status === "SUCCESS" && (
-          <p style={styles.success}>🎉 Payment Successful!</p>
-        )}
-      </div>
-    </div>
-  );
+  }, [order, status, navigate, user]);
 }
 
 /* -------------------- STYLES --------------------*/

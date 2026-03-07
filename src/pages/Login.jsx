@@ -19,7 +19,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // update form
+  /* ---------- INPUT CHANGE ---------- */
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -29,7 +29,7 @@ export default function Login() {
     }));
   };
 
-  // login
+  /* ---------- LOGIN ---------- */
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -53,8 +53,8 @@ export default function Login() {
 
       const data = await res.json();
 
-      if (!res.ok || !data.user) {
-        throw new Error(data.message || "Invalid email or password");
+      if (!res.ok || !data?.user) {
+        throw new Error(data?.message || "Invalid email or password");
       }
 
       const userData = {
@@ -64,13 +64,21 @@ export default function Login() {
         token: data.token,
       };
 
+      /* Save user */
       localStorage.setItem("student_user", JSON.stringify(userData));
 
+      /* Save token separately */
+      localStorage.setItem("token", data.token);
+
+      /* Update auth context */
       login(userData);
 
+      /* Redirect */
       navigate("/menu");
+
     } catch (err) {
-      setError(err.message || "Login failed");
+      console.error("Login error:", err);
+      setError(err.message || "Server not reachable");
     } finally {
       setLoading(false);
     }
@@ -105,7 +113,6 @@ export default function Login() {
           <form className="form" onSubmit={handleLogin}>
             <div className="input-wrapper">
               <FiMail className="icon" size={18} />
-
               <input
                 type="email"
                 name="email"
@@ -117,7 +124,6 @@ export default function Login() {
 
             <div className="input-wrapper">
               <FiLock className="icon" size={18} />
-
               <input
                 type="password"
                 name="password"
